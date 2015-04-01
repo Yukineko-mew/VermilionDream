@@ -15,7 +15,6 @@ import twitter4j.TwitterStream;
 import twitter4j.TwitterStreamFactory;
 import twitter4j.UserMentionEntity;
 import javafx.application.Platform;
-import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
@@ -52,7 +51,7 @@ public class VermilionControler implements Initializable {
 
 	private long userId;
 
-	@FXML private Label textLength;
+	@FXML private Label textCounter;
 
 	@FXML private TextArea textArea;
 
@@ -68,7 +67,7 @@ public class VermilionControler implements Initializable {
 
 	@Override
 	public void initialize(URL location, ResourceBundle resources) {
-		list = FXCollections.observableArrayList();
+		list = timeline.getItems();
 
 		timeline.setCellFactory(new Callback<ListView<Status>, ListCell<Status>>() {
 			@Override
@@ -76,9 +75,7 @@ public class VermilionControler implements Initializable {
 				return new TweetChip();
 			}
 		});
-		timeline.setItems(list);
 		sel = timeline.getSelectionModel();
-
 
 		vtwitter = new AsyncTwitterFactory().getInstance();
 		vtwitter.addListener(new VermilionTwitterListener());
@@ -98,11 +95,14 @@ public class VermilionControler implements Initializable {
 		instance = this;
 	}
 
-	/**
-	 * 残り文字数を反映させる。
-	 */
-	private void checkReplyLength(){
-		textLength.setText(new Integer(140-textArea.getText().length()).toString());
+	public void checkTextCount () {
+		int count = 140 - textArea.getText().length();
+		textCounter.setText(String.valueOf(count));
+		if(count <= 10) {
+			textCounter.setStyle("-fx-text-fill: red;");
+		} else {
+			textCounter.setStyle("-fx-text-fill: black;");
+		}
 	}
 
 	/**
@@ -111,7 +111,8 @@ public class VermilionControler implements Initializable {
 	 * TODO ついーとに失敗したときの処理
 	 */
 	public void onTweet(){
-		if(textArea.getText().length() ==0) return;
+		int l = textArea.getText().length();
+		if(l == 0 || l > 140) return;
 		StatusUpdate su = new StatusUpdate(textArea.getText());
 		if(replyId != null)
 			su.setInReplyToStatusId(replyId);
@@ -145,16 +146,16 @@ public class VermilionControler implements Initializable {
 			replyId = s.getId();
 		case N:
 			textArea.requestFocus();
-			checkReplyLength();
+			checkTextCount();
 			break;
 		case F:
 			vtwitter.createFavorite(timeline.getSelectionModel().getSelectedItem().getId());
 			break;
 		case J:
-			sel.select(sel.getSelectedIndex()+1);
+			sel.selectNext();
 			break;
 		case K:
-			sel.select(Math.max(0, sel.getSelectedIndex()-1));
+			sel.selectPrevious();
 			break;
 		default:
 			break;
@@ -181,7 +182,7 @@ public class VermilionControler implements Initializable {
 		default:
 			break;
 		}
-		checkReplyLength();
+		checkTextCount();
 	}
 
 	/**
@@ -195,7 +196,7 @@ public class VermilionControler implements Initializable {
 				Collections.sort(list, comp);
 				int n = sel.getSelectedIndex();
 				if(n <= 5){
-					sel.select(0);
+					sel.selectFirst();
 				}
 			} catch (Exception ex){
 				ex.printStackTrace();
